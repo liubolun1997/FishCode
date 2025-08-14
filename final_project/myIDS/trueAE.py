@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import classification_report, f1_score
 
-# ================= 数据预处理 =================
+# ================= Data preprocessing =================
 df = pd.read_csv("D:/毕设/TON_IoT datasets/Train_Test_datasets/Train_Test_Network_dataset/train_test_network.csv")
 y = df['label'].values
 
@@ -27,9 +27,9 @@ preprocessor = ColumnTransformer([
 ])
 X_processed = preprocessor.fit_transform(X)
 X_processed = X_processed.toarray() if hasattr(X_processed, 'toarray') else X_processed
-print("处理后特征维度：", X_processed.shape)
+print("Feature-dimension after processing:", X_processed.shape)
 
-# ================= Autoencoder 模型定义 =================
+# ================= Autoencoder model definition =================
 class Autoencoder(nn.Module):
     def __init__(self, input_dim, bottleneck_dim=16, dropout_num=0.05):
         super(Autoencoder, self).__init__()
@@ -65,7 +65,7 @@ class Autoencoder(nn.Module):
         decoded = self.decoder(encoded)
         return decoded
 
-# ================= 训练准备 =================
+# ================= Training preparation =================
 X_train = X_processed[y == 0]
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
 train_loader = DataLoader(TensorDataset(X_train_tensor, X_train_tensor), batch_size=128, shuffle=True)
@@ -75,7 +75,7 @@ model = Autoencoder(input_dim, bottleneck_dim=8, dropout_num=0.05)
 criterion = nn.L1Loss()
 optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
 
-# ================= 模型训练 =================
+# ================= Model training =================
 epochs = 100
 for epoch in range(epochs):
     model.train()
@@ -89,7 +89,7 @@ for epoch in range(epochs):
         total_loss += loss.item()
     print(f"Epoch [{epoch+1}/{epochs}], Loss: {total_loss/len(train_loader):.6f}")
 
-# ================= 推理 & 阈值搜索 =================
+# ================= Inference & Threshold Search =================
 X_all_tensor = torch.tensor(X_processed, dtype=torch.float32)
 model.eval()
 with torch.no_grad():
@@ -113,13 +113,13 @@ for th in fine_range:
         best_f1 = f1
         best_th = th
 
-print(f"最佳阈值: {best_th:.8f}, 对应Macro-F1: {best_f1:.6f}")
+print(f"best threshold: {best_th:.8f}, corresponding Macro-F1: {best_f1:.6f}")
 
-# ================= 保存模型和阈值 =================
+# ================= Save the model and thresholds =================
 torch.save(model.state_dict(), "deploy_ae/best_autoencoder_model.pth")
 with open("deploy_ae/best_model_info.json", "w") as f:
     json.dump({"best_threshold": float(best_th), "macro_f1": float(best_f1)}, f)
-print("✅ 模型和最佳阈值已保存到当前目录。")
+print("model and threshold has been save")
 
 # ================= 评估 =================
 y_pred = (errors > best_th).astype(int)

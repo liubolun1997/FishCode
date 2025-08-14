@@ -10,15 +10,15 @@ from tensorflow.keras.utils import to_categorical
 import warnings
 warnings.filterwarnings("ignore")
 
-# ===================== 1. 加载数据 =====================
+# ===================== loading data =====================
 df = pd.read_csv('D:/毕设/TON_IoT datasets/Train_Test_datasets/Train_Test_Network_dataset/train_test_network.csv')
 df = df.dropna()
 
-# 仅保留已知攻击类型
+# Only known attack types are retained
 attack_types = ['injection', 'xss']
 df = df[~df['type'].isin(attack_types)]
 
-# ===================== 2. 特征与标签 =====================
+# ===================== Features and tags =====================
 drop_cols = ['src_ip', 'dst_ip', 'http_uri', 'http_user_agent', 'type']
 
 X = df.drop(columns=drop_cols + ['label','type'])
@@ -32,34 +32,33 @@ for col in cat_cols:
     le = LabelEncoder()
     X[col] = le.fit_transform(X[col])
 
-# X = df.select_dtypes(include=[np.number])  # 仅使用数值型字段
 y = df['type']
 
-# 标签编码
+# label encoder
 label_encoder = LabelEncoder()
 y_encoded = label_encoder.fit_transform(y)
 y_onehot = to_categorical(y_encoded)
 
-# 保存标签编码器
+# Save the label encoder
 joblib.dump(label_encoder, "deploy_rnn/label_encoder_rnn.pkl")
 
-# 特征标准化
+# StandardScaler
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
-joblib.dump(scaler, "deploy_rnn/scaler_rnn.pkl")  # 保存标准化器
+joblib.dump(scaler, "deploy_rnn/scaler_rnn.pkl")  # Save the standardizer
 
-# ===================== 3. 构造序列数据 =====================
+# ===================== Construct sequence data =====================
 time_steps = 5
 n_samples = len(X_scaled) - time_steps
 X_seq = np.array([X_scaled[i:i+time_steps] for i in range(n_samples)])
 y_seq = y_onehot[time_steps:]
 
-print(f"输入维度: {X_seq.shape}, 标签维度: {y_seq.shape}")
+print(f"Enter the dimension: {X_seq.shape}, Label dimensions: {y_seq.shape}")
 
-# ===================== 4. 划分训练/测试集 =====================
+# ===================== Divide the training/test set =====================
 X_train, X_test, y_train, y_test = train_test_split(X_seq, y_seq, test_size=0.2, random_state=42)
 
-# ===================== 5. 构建 RNN + BiLSTM 模型 =====================
+# ===================== Build the RNN + BiLSTM model =====================
 model = Sequential()
 model.add(SimpleRNN(64, return_sequences=True, input_shape=(time_steps, X_seq.shape[2])))
 model.add(Bidirectional(LSTM(64)))
@@ -70,25 +69,25 @@ model.add(Dense(y_seq.shape[1], activation='softmax'))
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 model.summary()
 
-# ===================== 6. 训练模型 =====================
+# ===================== training model =====================
 history = model.fit(X_train, y_train, epochs=20, batch_size=64,
                     validation_data=(X_test, y_test), verbose=1)
 
-# 保存模型（HDF5 格式）
+# Save the model
 model.save("deploy_rnn/rnn_bilstm_model.h5")
 
-# ===================== 7. 模型评估 =====================
+# ===================== Model evaluation =====================
 loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
-print(f"\n 测试准确率: {accuracy * 100:.2f}%")
+print(f"\n Test accuracy: {accuracy * 100:.2f}%")
 
-# 预测结果
+# Predict the outcome
 y_pred_probs = model.predict(X_test)
 y_pred = np.argmax(y_pred_probs, axis=1)
 y_true = np.argmax(y_test, axis=1)
 
-# ===================== 8. 输出报告 =====================
-print("\n 分类报告:")
+# ===================== Output report =====================
+print("\n report:")
 print(classification_report(y_true, y_pred, target_names=label_encoder.classes_))
 
-print(" 混淆矩阵:")
+print("Confusion matrix:")
 print(confusion_matrix(y_true, y_pred))
