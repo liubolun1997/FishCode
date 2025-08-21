@@ -45,9 +45,10 @@ def get_fridge_dateset():
     scaler = MinMaxScaler()
     data[feature_cols] = scaler.fit_transform(data[feature_cols])
 
-    # 窗口长度（秒）
+    # Window Length (seconds)
     window_size = 60
-    # 生成样本：每个窗口内的数据作为一个样本，标签取窗口内最后一个时刻
+    # Generate sample: The data in each window is used as a sample,
+    # and the last moment in the window is labeled
     sequences = []
     labels = []
 
@@ -62,14 +63,16 @@ def get_fridge_dateset():
         if len(window_df) == 0:
             t += pd.Timedelta(seconds=1)
             continue
-        if len(window_df) < 5:  # 你可以设定最小长度门槛
+        # Minimum length thresholds can be set
+        if len(window_df) < 5:
             t += pd.Timedelta(seconds=1)
             continue
 
         seq = window_df[feature_cols].values
         counts = np.bincount(window_df[label_col])
         label = np.argmax(counts)
-        # label = window_df[label_col].values[-1]  # 取最后一个标签或多数投票
+        # Take the last label or majority vote
+        # label = window_df[label_col].values[-1]
         sequences.append(seq)
         labels.append(label)
         t += pd.Timedelta(seconds=1)
@@ -77,14 +80,14 @@ def get_fridge_dateset():
     max_len = max([len(s) for s in sequences])
     X = pad_sequences(sequences, maxlen=max_len, dtype='float32', padding='post')
     y = np.array(labels)
-    print("标签分布:", np.bincount(y))
-    print("数据总行数:", len(data))
-    print("开始时间:", start_time)
-    print("结束时间:", end_time)
-    print("所有 label 分布:", data['label'].value_counts())
-    print("label=0 的时间范围:", data[data['label'] == 0]['timestamp'].min(), " ~ ",
+    print("Label distribution:", np.bincount(y))
+    print("Total rows of data:", len(data))
+    print("begin time:", start_time)
+    print("end time:", end_time)
+    print("All label distributions:", data['label'].value_counts())
+    print("label=0 timeframe:", data[data['label'] == 0]['timestamp'].min(), " ~ ",
           data[data['label'] == 0]['timestamp'].max())
-    print("label=1 的时间范围:", data[data['label'] == 1]['timestamp'].min(), " ~ ",
+    print("label=1 timeframe:", data[data['label'] == 1]['timestamp'].min(), " ~ ",
           data[data['label'] == 1]['timestamp'].max())
 
     return X, y

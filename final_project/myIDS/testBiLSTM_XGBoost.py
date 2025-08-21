@@ -12,11 +12,12 @@ import getDataset
 X, y = getDataset.get_fridge_dateset()
 input_layer = Input(shape=(X.shape[1], X.shape[2]))
 x = Bidirectional(LSTM(64, return_sequences=True))(input_layer)
-x = GlobalMaxPooling1D()(x)  # 得到一个固定长度的向量
+# A vector of fixed length is obtained
+x = GlobalMaxPooling1D()(x)
 
 lstm_model = Model(inputs=input_layer, outputs=x)
 
-# 提取特征
+# Extract features
 features = lstm_model.predict(X)
 
 features, y = shuffle(features, y, random_state=42)

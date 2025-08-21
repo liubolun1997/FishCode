@@ -8,11 +8,11 @@ import getDataset
 X, y = getDataset.get_fridge_dateset()
 input_layer = Input(shape=(X.shape[1], X.shape[2]))
 x = Bidirectional(LSTM(64, return_sequences=True))(input_layer)
-x = GlobalMaxPooling1D()(x)  # 得到一个固定长度的向量
+x = GlobalMaxPooling1D()(x)
 
 lstm_model = Model(inputs=input_layer, outputs=x)
 
-# 提取特征
+# Extract features
 features = lstm_model.predict(X)
 
 X_train, X_test, y_train, y_test = train_test_split(features, y, test_size=0.2, random_state=42)
@@ -20,10 +20,9 @@ X_train, X_test, y_train, y_test = train_test_split(features, y, test_size=0.2, 
 svm_model = SVC(kernel='rbf', probability=True, random_state=42)
 svm_model.fit(X_train, y_train)
 
-# ==== 8. 评估模型 ====
 y_pred = svm_model.predict(X_test)
 
-print("\nSVM 分类报告:")
+print("\nSVM Classified reports:")
 print(classification_report(y_test, y_pred))
 
 print("Accuracy:", accuracy_score(y_test, y_pred))
